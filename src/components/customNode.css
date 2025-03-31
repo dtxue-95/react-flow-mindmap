@@ -1,0 +1,134 @@
+/* src/components/CustomNode.css */
+.mindmap-node {
+    background-color: #aae0d8; /* Teal-ish background */
+    border: 1px solid #6bc4b7;
+    border-radius: 5px;
+    padding: 8px 15px;
+    font-size: 12px;
+    text-align: center;
+    min-width: 80px;
+    position: relative; /* Needed for absolute positioning of buttons */
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .mindmap-node.edit-mode {
+      box-shadow: 0 0 5px 2px rgba(76, 175, 80, 0.7); /* Highlight in edit mode */
+  }
+  
+  .node-content {
+    cursor: default; /* Default cursor for content */
+  }
+  
+  .mindmap-node.edit-mode .node-content {
+      cursor: text; /* Text cursor when editable */
+  }
+  
+  .node-label {
+    white-space: nowrap; /* Prevent label text wrapping */
+  }
+  
+  .node-label-input {
+    width: 100%; /* Make input fill node width */
+    padding: 2px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: inherit; /* Match node font size */
+    text-align: center;
+    box-sizing: border-box; /* Include padding/border in width */
+  }
+  
+  /* Handles (connection points) */
+  .mindmap-handle {
+    width: 8px;
+    height: 8px;
+    background-color: #555;
+    opacity: 0.5; /* Make handles less prominent */
+  }
+  .mindmap-handle:hover {
+      opacity: 1;
+  }
+  
+  /* Collapse/Expand Toggle Button */
+  .collapse-toggle {
+    position: absolute;
+    right: -10px; /* Position relative to node edge */
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    color: #555;
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 18px; /* Center text vertically */
+    text-align: center;
+    cursor: pointer;
+    z-index: 10; /* Ensure it's above edges */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    padding: 0; /* Remove default padding */
+  }
+  
+  .collapse-toggle:hover {
+    background-color: #e0e0e0;
+  }
+  
+  /* Styling for the '+' in the circle when collapsed */
+  .collapse-toggle.expand {
+     background-color: #d1ecf1; /* Light blue when collapsed */
+     border-color: #bee5eb;
+     color: #0c5460;
+  }
+  
+  /* Edit Mode Controls (+/-) */
+  .edit-controls {
+    position: absolute;
+    bottom: -25px; /* Position below the node */
+    left: 50%;
+    transform: translateX(-50%);
+    display: none; /* Hidden by default */
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 3px 5px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  
+  .mindmap-node.edit-mode:hover .edit-controls,
+  .mindmap-node.edit-mode .edit-controls:hover { /* Show on hover in edit mode */
+    display: flex;
+  }
+  
+  .edit-button {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid #ccc;
+    background-color: #f8f8f8;
+    color: #333;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 16px;
+    text-align: center;
+    cursor: pointer;
+    padding: 0;
+  }
+  .edit-button:hover {
+    background-color: #e8e8e8;
+  }
+  
+  .edit-button--add {
+    color: green;
+    border-color: lightgreen;
+  }
+  .edit-button--delete {
+    color: red;
+    border-color: lightcoral;
+  }
+  
+  /* Styling for the node itself when collapsed */
+  .mindmap-node.collapsed {
+      background-color: #d1ecf1; /* Change background when collapsed */
+      border-style: dashed;
+  }
