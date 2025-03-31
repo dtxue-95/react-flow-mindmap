@@ -1,5 +1,6 @@
 // src/components/CustomNode.tsx
 import React, {
+	useEffect,
 	useState,
 	useCallback,
 	ChangeEvent,
@@ -8,17 +9,20 @@ import React, {
 } from "react";
 import { Handle, Position, NodeProps } from "reactflow";
 import { CustomNodeData } from "../types";
-import "./customNode.css"; // We'll create this for styling
+import "./CustomNode.css";
 
+// Make sure target/sourcePosition are included if layout changes them
 const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({
 	id,
 	data,
 	isConnectable,
+	targetPosition = Position.Left, // Default if not provided by layout
+	sourcePosition = Position.Right, // Default if not provided by layout
 }) => {
 	const {
 		label,
-		isCollapsed = false, // Default to not collapsed
-		childrenCount = 0, // Default count
+		isCollapsed = false,
+		childrenCount = 0,
 		mode,
 		onToggleCollapse,
 		onAddNode,
@@ -29,10 +33,18 @@ const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({
 	const [isEditing, setIsEditing] = useState(false);
 	const [currentLabel, setCurrentLabel] = useState(label);
 
-	// --- Edit Handling ---
+	// Reset editing state if mode changes externally
+	useEffect(() => {
+		if (mode === "view") {
+			setIsEditing(false);
+			setCurrentLabel(label); // Ensure label is current
+		}
+	}, [mode, label]);
+
+	// --- Edit Handling --- (Keep existing logic)
 	const handleDoubleClick = useCallback(() => {
 		if (mode === "edit") {
-			setCurrentLabel(label); // Reset edit text to current label
+			setCurrentLabel(label);
 			setIsEditing(true);
 		}
 	}, [mode, label]);
@@ -45,21 +57,22 @@ const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({
 	);
 
 	const handleLabelSave = useCallback(() => {
+		if (!isEditing) return; // Prevent saving if not editing
 		setIsEditing(false);
-		// Only call update if label actually changed
 		if (currentLabel.trim() && currentLabel !== label && onLabelChange) {
 			onLabelChange(id, currentLabel.trim());
 		} else {
-			setCurrentLabel(label); // Revert if empty or unchanged
+			setCurrentLabel(label); // Revert visual
 		}
-	}, [id, label, currentLabel, onLabelChange]);
+	}, [id, label, currentLabel, onLabelChange, isEditing]);
 
 	const handleKeyDown = useCallback(
 		(event: KeyboardEvent<HTMLInputElement>) => {
 			if (event.key === "Enter") {
+				event.preventDefault(); // Prevent potential form submission
 				handleLabelSave();
 			} else if (event.key === "Escape") {
-				setCurrentLabel(label); // Revert changes
+				setCurrentLabel(label);
 				setIsEditing(false);
 			}
 		},
@@ -68,39 +81,37 @@ const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({
 
 	const handleBlur = useCallback(
 		(event: FocusEvent<HTMLInputElement>) => {
-			// Prevent saving if blur is due to clicking +/- buttons
-			if (
-				event.relatedTarget instanceof HTMLElement &&
-				(event.relatedTarget.classList.contains("edit-button--add") ||
-					event.relatedTarget.classList.contains("edit-button--delete"))
-			) {
-				return;
-			}
-			handleLabelSave();
+			// Add slight delay to allow button clicks within node to register first
+			setTimeout(() => {
+				// Check if focus moved to an element *outside* the current node complex
+				// This is tricky, might need a more robust solution if clicks on +/- are missed
+				if (!event.currentTarget.parentNode?.contains(document.activeElement)) {
+					handleLabelSave();
+				}
+			}, 0);
 		},
 		[handleLabelSave]
 	);
 
 	// --- Button Clicks ---
 	const handleAddClick = (e: React.MouseEvent) => {
-		e.stopPropagation(); // Prevent node drag/selection
+		e.stopPropagation();
 		onAddNode?.(id);
 	};
 
 	const handleDeleteClick = (e: React.MouseEvent) => {
 		e.stopPropagation();
-		// Add confirmation maybe?
 		onDeleteNode?.(id);
 	};
 
 	const handleToggleClick = (e: React.MouseEvent) => {
 		e.stopPropagation();
+		// *** Always allow toggle, regardless of mode ***
 		onToggleCollapse?.(id);
 	};
 
-	// Determine if the node has potential children (based on edges originating from it)
-	// This is a simplification; a more robust check might involve looking at the original data structure
-	const canCollapse = childrenCount > 0; // Assume childrenCount is accurately passed
+	// Can collapse if it has children (count passed via props)
+	const canCollapse = childrenCount > 0;
 
 	return (
 		<div
@@ -108,39 +119,38 @@ const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({
 				isCollapsed ? "collapsed" : ""
 			}`}
 		>
-			{/* Input Handle (connection target) - Always present? */}
 			<Handle
 				type='target'
-				position={Position.Left}
+				position={targetPosition} // Use dynamic position
 				isConnectable={isConnectable}
 				className='mindmap-handle'
 			/>
 
-			{/* Node Body */}
 			<div className='node-content' onDoubleClick={handleDoubleClick}>
-				{isEditing ? (
+				{isEditing && mode === "edit" ? ( // Only allow input render in edit mode
 					<input
 						type='text'
 						value={currentLabel}
 						onChange={handleLabelChangeInput}
 						onKeyDown={handleKeyDown}
-						onBlur={handleBlur} // Use onBlur for saving when clicking away
+						onBlur={handleBlur}
 						autoFocus
 						className='node-label-input'
+						onClick={(e) => e.stopPropagation()} // Prevent node drag when clicking input
 					/>
 				) : (
 					<div className='node-label'>{label}</div>
 				)}
 			</div>
 
-			{/* Collapse/Expand Toggle (Circle with +/- or count) */}
+			{/* Collapse/Expand Toggle - Always visible if canCollapse */}
 			{canCollapse && (
 				<button
 					className={`collapse-toggle ${isCollapsed ? "expand" : "collapse"}`}
-					onClick={handleToggleClick}
+					onClick={handleToggleClick} // Directly call toggle
 					title={isCollapsed ? `Expand (${childrenCount})` : "Collapse"}
 				>
-					{isCollapsed ? `+${childrenCount}` : "-"}
+					{isCollapsed ? `+${childrenCount || ""}` : "-"}
 				</button>
 			)}
 
@@ -154,7 +164,6 @@ const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({
 					>
 						+
 					</button>
-					{/* Optionally prevent deleting the root node */}
 					{id !== "root" && (
 						<button
 							onClick={handleDeleteClick}
@@ -167,11 +176,15 @@ const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({
 				</div>
 			)}
 
-			{/* Output Handle (connection source) - Hide when collapsed */}
+			{/* Output Handle - Hide visually when collapsed? Or just don't draw edges?
+                React Flow handles not drawing edges if target is hidden.
+                Keep handle present but maybe style differently if needed.
+                Only render if NOT collapsed to avoid visual clutter.
+             */}
 			{!isCollapsed && (
 				<Handle
 					type='source'
-					position={Position.Right}
+					position={sourcePosition} // Use dynamic position
 					isConnectable={isConnectable}
 					className='mindmap-handle'
 				/>
@@ -180,4 +193,4 @@ const CustomNode: React.FC<NodeProps<CustomNodeData>> = ({
 	);
 };
 
-export default React.memo(CustomNode); // Memoize for performance
+export default React.memo(CustomNode);
